@@ -68,7 +68,7 @@ async function fetchPage(rawUrl) {
   const pageTitle = $('title').first().text().trim() || url.hostname;
   $('script, style, noscript, svg, nav, footer, header, form').remove();
   const content = ($('main').text() || $('article').text() || $('body').text())
-    .replace(/\\s+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 
   return { title: pageTitle, content, url: url.href };
