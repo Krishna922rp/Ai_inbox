@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Archive, ArrowUpRight, BookOpen, Check, ChevronDown, CircleHelp, FileText, Globe2, Inbox, LoaderCircle, Plus, Search, Send, Sparkles, Trash2, X } from 'lucide-react';
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\\/$/, '');
+const apiUrl = (path) => `${API_BASE}${path}`;
+
 const fmt = (date) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(date));
 export default function App() {
   const [items, setItems] = useState([]);
@@ -19,7 +22,7 @@ export default function App() {
   const [error, setError] = useState('');
 
   async function loadItems() {
-    try { const res = await fetch('/api/items'); if (!res.ok) throw new Error('Could not load your library'); const data = await res.json(); setItems(data.items || []); }
+    try { const res = await fetch(apiUrl('/api/items')); if (!res.ok) throw new Error('Could not load your library'); const data = await res.json(); setItems(data.items || []); }
     catch (e) { setError(e.message); } finally { setLoading(false); }
   }
   useEffect(() => { loadItems(); }, []);
@@ -28,19 +31,19 @@ export default function App() {
     e.preventDefault(); setSaving(true); setError('');
     try {
       const payload = kind === 'note' ? { type: 'note', title: title.trim(), content: content.trim() } : { type: 'url', url: url.trim(), title: title.trim() };
-      const res = await fetch('/api/ingest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res = await fetch(apiUrl('/api/ingest'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Unable to save this source');
       setModal(false); setTitle(''); setContent(''); setUrl(''); await loadItems();
     } catch (e) { setError(e.message); } finally { setSaving(false); }
   }
   async function askQuestion(e) {
     e.preventDefault(); if (!question.trim()) return; setAsking(true); setError(''); setAnswer(null);
-    try { const res = await fetch('/api/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Unable to answer'); setAnswer(data); }
+    try { const res = await fetch(apiUrl('/api/query'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question }) }); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'Unable to answer'); setAnswer(data); }
     catch (e) { setError(e.message); } finally { setAsking(false); }
   }
   async function removeItem(id) {
     if (!window.confirm('Delete this saved source?')) return;
-    const res = await fetch('/api/items/' + id, { method: 'DELETE' }); if (res.ok) setItems(current => current.filter(item => item.id !== id));
+    const res = await fetch(apiUrl('/api/items/' + id, { method: 'DELETE' }); if (res.ok) setItems(current => current.filter(item => item.id !== id));
   }
   const notes = items.filter(i => i.type === 'note').length, links = items.filter(i => i.type === 'url').length;
   return <div className="app-shell">

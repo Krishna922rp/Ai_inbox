@@ -31,11 +31,12 @@ Without an API key, notes and URLs can still be stored, but embeddings and AI Q&
 | Variable | Purpose | Default |
 |---|---|---|
 | PORT | API port | 4000 |
-| CLIENT_ORIGIN | Allowed browser origin | http://localhost:5173 |
+| CLIENT_ORIGIN | Comma-separated allowed browser origins | http://localhost:5173 |
 | OPENAI_API_KEY | OpenAI API key | required for AI |
 | OPENAI_EMBEDDING_MODEL | Embedding model | text-embedding-3-small |
 | OPENAI_CHAT_MODEL | Answer model | gpt-4o-mini |
 | DATABASE_PATH | SQLite file path | ./data/recall.db |
+| VITE_API_BASE_URL | Public API base URL for a separately hosted frontend | same-origin (blank) |
 
 ## API
 - `GET /api/health` — process health
@@ -50,10 +51,10 @@ Run `npm test` for the API utility tests and `npm run build` for the frontend pr
 ## Design notes and limitations
 - SQLite keeps setup simple for a single-user assignment; use a managed database and dedicated vector store as data volume grows.
 - Cosine similarity is calculated in-process over stored embedding JSON. This is intentionally lightweight and should be replaced with indexed vector search at larger scale.
-- URL ingestion accepts public HTTP(S) HTML/text only and has basic private-network address checks; production deployments should add robust DNS-rebinding protection, fetch egress controls, content limits, and background jobs.
+- URL ingestion accepts public HTTP(S) HTML/text only and has basic private-network address checks; this is a best-effort assignment safeguard, not a complete SSRF boundary. Before public production use, route URL fetching through a dedicated egress-restricted service that pins validated DNS results, revalidates redirects, blocks all special-use IPv4/IPv6 ranges, and enforces streaming byte/time limits.
 - No authentication is included, per the assignment's scope. Do not expose this instance publicly with private notes until access control is added.
 - URL redirects are rejected to reduce SSRF risk. Some sites block automated requests or render content only in a browser.
 - If the OpenAI key is missing, ingestion stores content without embeddings; re-ingest those sources after configuring AI to index them.
 
 ## Hosting handoff
-Deploy the frontend and API as separate services or serve the built frontend from a static host. Configure `CLIENT_ORIGIN`, `PORT`, `DATABASE_PATH`, and the OpenAI variables on the API host. Persist the SQLite data directory on a durable volume. Set the frontend API base/proxy for your chosen host (the included Vite proxy is for local development). Run `npm run build` before publishing the client.
+Deploy the frontend and API as separate services or serve the built frontend from a static host. Configure `CLIENT_ORIGIN`, `PORT`, `DATABASE_PATH`, and the OpenAI variables on the API host. Persist the SQLite data directory on a durable volume. For a separately hosted frontend, set `VITE_API_BASE_URL` at build time to the API origin (for example, `https://api.example.com`); the client app uses it for API requests. For same-origin hosting, leave it blank. The included Vite proxy is for local development. Run `npm run build` before publishing the client.
