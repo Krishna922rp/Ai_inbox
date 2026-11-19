@@ -1,9 +1,7 @@
-import { load } from 'cheerio';
-import { lookup } from 'node:dns/promises';
-import net from 'node:net';
 import { db } from './db.js';
 import { splitIntoChunks } from './text.js';
 import { createEmbeddings } from './openai.js';
+import { fetchPage } from './url-fetch.js';
 
 function isPrivateIp(ip) {
   if (net.isIPv4(ip)) {
