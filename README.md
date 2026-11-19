@@ -66,12 +66,14 @@ Never commit .env or a real API key.
 
 ## API
 
-- GET /api/health — process health
-- GET /api/items — list saved sources and library counts
-- GET /api/items?q=keyword — case-insensitive search across title and full saved content
-- POST /api/ingest — { "type":"note", "title":"...", "content":"..." } (up to 100,000 characters) or { "type":"url", "url":"https://..." } (up to 2,048 characters)
-- POST /api/query — { "question":"..." }; returns a grounded answer and source snippets
-- DELETE /api/items/:id — delete a source and its chunks
+- **GET /api/health** — returns `{ "status": "ok" }`.
+- **GET /api/items** — returns `{ "items": [...], "counts": { "total": 2, "notes": 1, "links": 1 } }`. Each item contains `id`, `type`, `title`, `url`, `content_preview` (first 220 characters), and `created_at`.
+- **GET /api/items?q=keyword** — searches the complete saved title and body, case-insensitively; the counts still describe the whole library. Search text is limited to 200 characters.
+- **POST /api/ingest** — accepts either `{ "type": "note", "title": "...", "content": "..." }` (content up to 100,000 characters) or `{ "type": "url", "url": "https://..." }` (URL up to 2,048 characters). Returns HTTP 201 with `{ "item": { "id", "type", "title", "url", "created_at", "chunks" } }`. URL content is fetched and extracted by the API server; redirects and non-public hosts are rejected.
+- **POST /api/query** — accepts `{ "question": "..." }` (up to 2,000 characters). Returns `{ "answer": "... [1]", "sources": [{ "chunk_id", "item_id", "title", "url", "snippet", "score" }] }`. Source order matches the numbered citations in the answer. Embedding vectors are never returned to the browser. If no relevant chunks exist, the API returns an explanatory answer and an empty sources array.
+- **DELETE /api/items/:id** — deletes a source; SQLite cascades the deletion to its chunks.
+
+Validation failures return HTTP 400 (or 413 for oversized note content); missing AI configuration returns HTTP 503 for semantic Q&A. Unexpected server errors return a generic HTTP 500 message while structured logs retain the error type and status.
 
 ## Checks
 
@@ -80,7 +82,7 @@ npm test
 npm run build
 ~~~
 
-The tests cover chunking, cosine similarity, and full-content item search. The production build checks the React/Vite frontend. AI calls and external website ingestion require a configured key/network and are not mocked as passing integration tests.
+The Node test suite covers chunking and similarity, SQLite schema/cascade behavior, atomic note and URL ingestion, URL-fetch SSRF/size/redirect safeguards, validation, full-content search, and HTTP route behavior for list, ingest, and semantic query. Route tests use an in-memory SQLite database and deterministic embedding/LLM fakes; they do not call OpenAI or depend on live external websites. The GitHub Actions workflow runs `npm install`, `npm test`, and `npm run build` on Node.js 22.
 
 ## Design notes and limitations
 

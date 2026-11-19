@@ -328,7 +328,14 @@ export default function App() {
                     {answer.sources.map((source, index) => (
                       <div className="source" key={source.chunk_id || index}>
                         <span>{index + 1}</span>
-                        <div><b>{source.title}</b><small>{source.snippet}</small></div>
+                        <div>
+                          <b>
+                            {source.url
+                              ? <a href={source.url} target="_blank" rel="noreferrer">{source.title}</a>
+                              : source.title}
+                          </b>
+                          <small>{source.snippet}</small>
+                        </div>
                       </div>
                     ))}
                   </div>
