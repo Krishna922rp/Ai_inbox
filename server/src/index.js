@@ -6,6 +6,7 @@ import { ingestSource } from './ingest.js';
 import { createEmbeddings, generateAnswer } from './openai.js';
 import { cosineSimilarity } from './text.js';
 import { listItems } from './items.js';
+import { validateIngestPayload } from './validation.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -48,25 +49,12 @@ app.get('/api/items', (req, res, next) => {
 
 app.post('/api/ingest', async (req, res, next) => {
   try {
-    const { type, title, content, url } = req.body || {};
-    if (!['note', 'url'].includes(type)) {
-      return res.status(400).json({ error: 'type must be note or url' });
-    }
-    if (type === 'note' && (
-      typeof title !== 'string' || typeof content !== 'string' ||
-      !title.trim() || !content.trim()
-    )) {
-      return res.status(400).json({ error: 'Notes require a title and content.' });
-    }
-    if (type === 'url' && (typeof url !== 'string' || !url.trim())) {
-      return res.status(400).json({ error: 'A URL is required.' });
-    }
-    if (title !== undefined && title !== null &&
-      (typeof title !== 'string' || title.length > 160)) {
-      return res.status(400).json({ error: 'Title must be 160 characters or fewer.' });
+    const validation = validateIngestPayload(req.body);
+    if (validation.error) {
+      return res.status(validation.status).json({ error: validation.error });
     }
 
-    const item = await ingestSource({ type, title, content, url });
+    const item = await ingestSource(validation.value);
     res.status(201).json({ item });
   } catch (error) {
     next(error);

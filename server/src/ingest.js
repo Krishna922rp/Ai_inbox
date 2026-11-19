@@ -72,9 +72,12 @@ async function fetchPage(rawUrl) {
   return { title: pageTitle, content, url: url.href };
 }
 
-export async function ingestSource({ type, title, content, url }) {
+export async function ingestSource({ type, title, content, url }, dependencies = {}) {
+  const database = dependencies.database || db;
+  const pageFetcher = dependencies.fetchPage || fetchPage;
+  const embeddingGenerator = dependencies.createEmbeddings || createEmbeddings;
   if (type === 'url') {
-    const page = await fetchPage(url);
+    const page = await pageFetcher(url);
     title = title?.trim() || page.title;
     content = page.content;
     url = page.url;
@@ -93,18 +96,24 @@ export async function ingestSource({ type, title, content, url }) {
 
   // Generate vectors before writing the item so an AI/API failure cannot leave
   // an orphaned source with no chunks. The database writes remain atomic.
-  const vectors = process.env.OPENAI_API_KEY
-    ? await createEmbeddings(chunks)
-    : chunks.map(() => null);
+  const vectors = dependencies.createEmbeddings
+    ? await embeddingGenerator(chunks)
+    : process.env.OPENAI_API_KEY
+      ? await embeddingGenerator(chunks)
+      : chunks.map(() => null);
 
-  const insertItem = db.prepare(
+  if (vectors.length !== chunks.length) {
+    throw new Error('Embedding response count did not match the source chunks.');
+  }
+
+  const insertItem = database.prepare(
     'INSERT INTO items(type, title, url, content) VALUES (?, ?, ?, ?)'
   );
-  const insertChunk = db.prepare(
+  const insertChunk = database.prepare(
     'INSERT INTO chunks(item_id, chunk_index, content, embedding) VALUES (?, ?, ?, ?)'
   );
 
-  const itemId = db.transaction(() => {
+  const itemId = database.transaction(() => {
     const result = insertItem.run(type, title, type === 'url' ? url : null, content);
     const id = Number(result.lastInsertRowid);
     chunks.forEach((chunk, index) => {
@@ -113,12 +122,14 @@ export async function ingestSource({ type, title, content, url }) {
     return id;
   })();
 
+  const saved = database.prepare('SELECT created_at FROM items WHERE id = ?').get(itemId);
+
   return {
     id: itemId,
     type,
     title,
     url: type === 'url' ? url : null,
-    created_at: new Date().toISOString(),
+    created_at: saved.created_at,
     chunks: chunks.length
   };
 }
