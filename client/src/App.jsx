@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Archive, ArrowUpRight, BookOpen, Check, ChevronDown, CircleHelp, FileText, Globe2, Inbox, LoaderCircle, Plus, Search, Send, Sparkles, Trash2, X } from 'lucide-react';
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\\/$/, '');
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const apiUrl = (path) => `${API_BASE}${path}`;
 
 const fmt = (date) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(new Date(date));
@@ -43,7 +43,7 @@ export default function App() {
   }
   async function removeItem(id) {
     if (!window.confirm('Delete this saved source?')) return;
-    const res = await fetch(apiUrl('/api/items/' + id, { method: 'DELETE' }); if (res.ok) setItems(current => current.filter(item => item.id !== id));
+    const res = await fetch(apiUrl('/api/items/' + id), { method: 'DELETE' }); if (res.ok) setItems(current => current.filter(item => item.id !== id));
   }
   const notes = items.filter(i => i.type === 'note').length, links = items.filter(i => i.type === 'url').length;
   return <div className="app-shell">

@@ -4,7 +4,7 @@ A personal knowledge inbox for saving notes and web pages, then asking grounded 
 
 ## Stack
 - **Frontend:** React 18, Vite, Lucide icons
-- **API:** Node.js 20+, Express
+- **API:** Node.js 22 LTS, Express
 - **Storage:** SQLite via better-sqlite3
 - **AI:** OpenAI embeddings and chat completions
 - **Retrieval:** text chunking, persisted embeddings, cosine-similarity ranking
@@ -19,7 +19,7 @@ A personal knowledge inbox for saving notes and web pages, then asking grounded 
 - Health endpoint, input validation, request logs and API error responses
 
 ## Local setup
-1. Install Node.js 20 or later.
+1. Install Node.js 22 LTS (Node 24 is not supported by the current native SQLite dependency).
 2. Copy `.env.example` to `.env` and add an OpenAI API key for AI search.
 3. Run `npm install` from the repository root.
 4. Run `npm run dev`.
