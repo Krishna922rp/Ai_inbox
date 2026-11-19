@@ -29,6 +29,7 @@ function ErrorBanner({ children, onDismiss }) {
 
 export default function App() {
   const [items, setItems] = useState([]);
+  const [counts, setCounts] = useState({ total: 0, notes: 0, links: 0 });
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -58,6 +59,7 @@ export default function App() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Could not load your library.');
       setItems(Array.isArray(data.items) ? data.items : []);
+      setCounts(data.counts || { total: data.items?.length || 0, notes: 0, links: 0 });
       setError('');
     } catch (err) {
       if (err.name !== 'AbortError') setError(err.message || 'Could not load your library.');
@@ -118,8 +120,8 @@ export default function App() {
     () => items.filter((item) => filter === 'all' || item.type === filter),
     [items, filter]
   );
-  const notes = items.filter((item) => item.type === 'note').length;
-  const links = items.filter((item) => item.type === 'url').length;
+  const notes = counts.notes;
+  const links = counts.links;
 
   function openModal() {
     setError('');
@@ -195,7 +197,15 @@ export default function App() {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || 'Could not delete this source.');
       }
+      const removed = items.find((item) => item.id === id);
       setItems((current) => current.filter((item) => item.id !== id));
+      if (removed) {
+        setCounts((current) => ({
+          total: Math.max(0, current.total - 1),
+          notes: Math.max(0, current.notes - (removed.type === 'note' ? 1 : 0)),
+          links: Math.max(0, current.links - (removed.type === 'url' ? 1 : 0))
+        }));
+      }
     } catch (err) {
       setError(err.message || 'Could not delete this source.');
     }
@@ -215,7 +225,7 @@ export default function App() {
           onClick={() => setFilter('all')}
           aria-current={filter === 'all' ? 'page' : undefined}
         >
-          <Inbox size={17} /> All knowledge <span className="nav-count">{items.length}</span>
+          <Inbox size={17} /> All knowledge <span className="nav-count">{counts.total}</span>
         </button>
         <button
           type="button"
@@ -275,7 +285,7 @@ export default function App() {
           <div className="stats" aria-label="Library summary">
             <div className="stat-card">
               <span className="stat-icon purple"><Archive size={17} /></span>
-              <div><strong>{items.length}</strong><span>Total sources</span></div>
+              <div><strong>{counts.total}</strong><span>Total sources</span></div>
               <small>In your library</small>
             </div>
             <div className="stat-card">
