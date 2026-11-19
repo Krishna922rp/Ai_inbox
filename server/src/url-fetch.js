@@ -140,10 +140,12 @@ function requestText(url, resolved, { timeoutMs, maxBytes }) {
     const hostname = url.hostname.replace(/^\[|\]$/g, '');
     const transport = url.protocol === 'https:' ? https : http;
     let settled = false;
+    let totalTimer;
 
     const fail = (error) => {
       if (!settled) {
         settled = true;
+        clearTimeout(totalTimer);
         reject(error);
       }
     };
@@ -222,6 +224,7 @@ function requestText(url, resolved, { timeoutMs, maxBytes }) {
       response.on('end', () => {
         if (settled) return;
         settled = true;
+        clearTimeout(totalTimer);
         resolve({
           statusCode,
           contentType,
@@ -234,9 +237,10 @@ function requestText(url, resolved, { timeoutMs, maxBytes }) {
       });
     });
 
-    request.setTimeout(timeoutMs, () => {
+    totalTimer = setTimeout(() => {
       request.destroy(httpError('The page request timed out.', 504));
-    });
+    }, timeoutMs);
+    totalTimer.unref?.();
 
     request.on('error', (error) => {
       fail(error.status ? error : httpError('Unable to fetch the requested public page.', 422));

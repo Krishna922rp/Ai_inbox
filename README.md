@@ -69,7 +69,7 @@ Never commit .env or a real API key.
 - GET /api/health — process health
 - GET /api/items — list saved sources and library counts
 - GET /api/items?q=keyword — case-insensitive search across title and full saved content
-- POST /api/ingest — { "type":"note", "title":"...", "content":"..." } or { "type":"url", "url":"https://..." }
+- POST /api/ingest — { "type":"note", "title":"...", "content":"..." } (up to 100,000 characters) or { "type":"url", "url":"https://..." } (up to 2,048 characters)
 - POST /api/query — { "question":"..." }; returns a grounded answer and source snippets
 - DELETE /api/items/:id — delete a source and its chunks
 
@@ -86,7 +86,7 @@ The tests cover chunking, cosine similarity, and full-content item search. The p
 
 - SQLite keeps setup simple for a single-user assignment; use a managed database and dedicated vector store as data volume grows.
 - Cosine similarity is calculated in-process over stored embedding JSON. This is intentionally lightweight and should be replaced with indexed vector search at larger scale.
-- URL ingestion accepts public HTTP(S) HTML/text only and has basic private-network address checks; this is a best-effort assignment safeguard, not a complete SSRF boundary. Before public production use, route URL fetching through a dedicated egress-restricted service that pins validated DNS results, revalidates redirects, blocks all special-use IPv4/IPv6 ranges, and enforces streaming byte/time limits.
+- URL ingestion accepts public HTTP(S) HTML/text only. It resolves and validates every DNS answer, pins the selected public address into the outbound socket lookup (preventing a second DNS resolution), rejects non-standard ports and redirects, and enforces a 2 MB streaming response cap plus a 12-second total timeout. This is a stronger assignment-level SSRF safeguard, but it is not a substitute for network egress controls in a public production service. Production hosting should still isolate outbound fetching, deny private/special-use ranges at the network layer, and apply rate limits.
 - No authentication is included, per the assignment's scope. Do not expose this instance publicly with private notes until access control is added.
 - URL redirects are rejected to reduce SSRF risk. Some sites block automated requests or render content only in a browser.
 - If the OpenAI key is missing, ingestion stores content without embeddings; re-ingest those sources after configuring AI to index them.

@@ -100,3 +100,32 @@ test('rejects redirects rather than following an unchecked destination', async (
     (error) => error.status === 422
   );
 });
+
+test('rejects an oversized response body even when no content length is supplied', async () => {
+  await assert.rejects(
+    fetchPage('https://example.com/large', {
+      resolver: async () => [{ address: '93.184.216.34', family: 4 }],
+      maxBytes: 8,
+      requestImpl: async () => ({
+        statusCode: 200,
+        contentType: 'text/plain',
+        body: 'This response is too large.'
+      })
+    }),
+    (error) => error.status === 413
+  );
+});
+
+test('rejects non-text content types', async () => {
+  await assert.rejects(
+    fetchPage('https://example.com/image', {
+      resolver: async () => [{ address: '93.184.216.34', family: 4 }],
+      requestImpl: async () => ({
+        statusCode: 200,
+        contentType: 'image/png',
+        body: 'not readable text'
+      })
+    }),
+    (error) => error.status === 422
+  );
+});
