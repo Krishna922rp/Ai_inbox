@@ -19,6 +19,27 @@ A personal knowledge inbox for saving notes and web pages, then asking grounded 
 - Filter by note or web page, open saved links, and delete sources
 - Health endpoint, input validation, request logs and API error responses
 
+## Architecture
+
+The React client sends requests to the Express API. The API validates input, stores original source text and overlapping chunks in SQLite, and uses OpenAI embeddings for semantic indexing and question vectors. Queries rank stored chunks with cosine similarity, pass only the best excerpts to the chat model, and return a numbered answer with matching source snippets. Public URLs are fetched and extracted server-side.
+
+```text
+React + Vite
+    |
+    v
+Express API -----> Public URL fetcher
+    |                    |
+    |                    v
+    |               Extracted text
+    v
+SQLite <-------- OpenAI embeddings
+    |
+    v
+Cosine retrieval -> OpenAI chat -> Answer + source citations
+```
+
+See [docs/architecture.md](docs/architecture.md) for ingestion/query lifecycles and scaling tradeoffs.
+
 ## Local setup
 
 **Requirements:** Node.js 22 LTS and npm. The current better-sqlite3 native dependency is tested on Node 22; Node 24 is not supported by this project yet.
